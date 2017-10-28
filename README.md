@@ -7,8 +7,8 @@ Simple framework for running generalized linear models or robust linear models w
 This currently supports 
 * Gaussian with identity link
 * Poisson with log link
-* Binomial with log link 
-* Negative Binomial with logit link
+* Binomial with logit link
+* Negative Binomial with log link
 
 ## Robust Norms
 
