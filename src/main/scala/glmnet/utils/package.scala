@@ -1,4 +1,4 @@
-package com.github.timsetsfire.glmnet
+package com.github.timsetsfire.en4s
 
 /**
   * Created by WhittakerT on 10/25/2017.

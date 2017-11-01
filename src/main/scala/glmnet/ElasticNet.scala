@@ -1,19 +1,45 @@
-package com.github.timsetsfire.glmnet
+package com.github.timsetsfire.en4s
 
 import breeze.linalg._
 import breeze.numerics._
 import breeze.stats._
-import com.github.timsetsfire.glmnet.utils._
-import com.github.timsetsfire.glmnet.robust.norms._
-import com.github.timsetsfire.glmnet.robust.scale.Mad._
-import com.github.timsetsfire.glmnet.families._
-import com.github.timsetsfire.glmnet.optimize.CoordinateDescent
+import com.github.timsetsfire.en4s.utils._
+import com.github.timsetsfire.en4s.robust.norms._
+import com.github.timsetsfire.en4s.robust.scale.Mad._
+import com.github.timsetsfire.en4s.families._
+import com.github.timsetsfire.en4s.optimize.CoordinateDescent
 import breeze.plot._
 
 /**
   * Created by WhittakerT on 10/26/2017.
   */
 
+class RlmNet (
+               features: DenseMatrix[Double],
+               target: DenseVector[Double],
+               rnorm: RobustNorm = LeastSquares,
+               lambdaSeq: DenseVector[Double] = DenseVector.zeros[Double](100),
+               alpha: Double = 1d,
+               tolerance: Double = 1e-3,
+               standardizeFeatures: Boolean = true,
+               standardizeTarget: Boolean = false,
+               intercept: Boolean = false
+              ) extends ElasticNet(features, target, DenseVector(1d), "gaussian", "identity", rnorm, lambdaSeq, alpha, tolerance, standardizeFeatures, standardizeTarget, intercept)
+
+class GlmNet(
+               features: DenseMatrix[Double],
+               target: DenseVector[Double],
+               offset: DenseVector[Double] = DenseVector(1d),
+               family: String = "gaussian",
+               link: String = "identity",
+               lambdaSeq: DenseVector[Double] = DenseVector.zeros[Double](100),
+               alpha: Double = 1d,
+               tolerance: Double = 1e-3,
+               standardizeFeatures: Boolean = true,
+               standardizeTarget: Boolean = false,
+               intercept: Boolean = true 
+             ) extends ElasticNet(features, target, offset, family, link, LeastSquares, lambdaSeq, alpha, tolerance, standardizeFeatures, standardizeTarget, intercept)
+             
 class ElasticNet (
                    val features: DenseMatrix[Double],
                    val target: DenseVector[Double],
@@ -25,10 +51,9 @@ class ElasticNet (
                    val alpha: Double = 1d,
                    val tolerance: Double = 1e-3,
                    val standardizeFeatures: Boolean = true,
-                   val standardizeTarget: Boolean = true,
+                   val standardizeTarget: Boolean = false,
                    val intercept: Boolean = false
                  ) {
-
 
   val (x, xm, xsig) = {
     val z = stdizeMatrix(features)
@@ -47,7 +72,7 @@ class ElasticNet (
   val parms = Params( DenseVector.zeros[Double](n), DenseVector(0d), intercept)
   parms.scale(0) = 1e-4
   parms.b0(0) = if(link=="log" & (offset.length == y.length)) {
-    log(mean(y :/ offset))
+    log(mean(y /:/ offset))
   } else if(link=="log") {
     log(mean(y))
   } else if(link=="logit") {
@@ -90,7 +115,7 @@ class ElasticNet (
   if ( sum(abs(lambdaSeq)) == 0d ) {
     //  val yt = if(family == "negbin") y / ( mean(y) + mean(y) * mean(y) ) else y.copy
     val (xt, xs, xm) = stdizeMatrix(x)
-    val wx = xt(::, *).map{ _ :* weight}
+    val wx = xt(::, *).map{ _ *:* weight}
     val xTy = 1 / (m).toDouble * wx.t*(y)
     val lambdaMax = max( abs( xTy ) ) / (if(alpha==0) 0.001 else alpha)
     val lambdaMin = if(x.rows < x.cols) lambdaMax * 1e-2 else lambdaMax * 1e-4
@@ -107,7 +132,7 @@ class ElasticNet (
       val s = dist.w(x, y, exposure, parms)
       val r = (y - dist.yhat(x, exposure, parms) )
       weight := rnorm.w(r / mad(r))
-      parms.nzbv := (- abs( x.t * r )/x.rows.toDouble :< - lambda * alpha) :| parms.nzbv
+      parms.nzbv := (- abs( x.t * r )/x.rows.toDouble <:< - lambda * alpha) |:| parms.nzbv
       val nz = parms.nzbv.toArray.zipWithIndex.filter{ _._1 == true}.map{ _._2}
       val cd = new CoordinateDescent(costFunc(dist), x, z, weight, s, weightFunction)
 	  //cd.optimize( alpha, lambdaSeq(iter), parms, tolerance, nz = nz)

@@ -1,4 +1,4 @@
-package com.github.timsetsfire.glmnet.robust
+package com.github.timsetsfire.en4s.robust
 
 
 /**

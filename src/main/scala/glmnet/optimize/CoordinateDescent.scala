@@ -1,8 +1,8 @@
-package com.github.timsetsfire.glmnet.optimize
+package com.github.timsetsfire.en4s.optimize
 
 import breeze.linalg._
 import breeze.numerics._
-import com.github.timsetsfire.glmnet.utils._
+import com.github.timsetsfire.en4s.utils._
 
 /**
   * Created by WhittakerT on 10/26/2017.
@@ -18,8 +18,7 @@ class CoordinateDescent( cost: (Params, Double, Double) => Double,
     //println("optimizing")
     def descend(params: Params, ind: Int): Unit = {
       val b = params.b(ind)
-      val wx = (x(::, ind) :* w) :* s
-      //val wx = (x(::, ind) :* w)
+      val wx = (x(::, ind) *:* w) *:* s
       val t = 1/ (x.rows.toDouble) *( wx.t * ( (y - g(x,params) + (params.b(ind)*x(::, ind)) )))
       params.b(ind) = softThresh(t, alpha * lambda) / ( 1/x.rows.toDouble * (wx.t*x(::, ind)) + (1 - alpha)*lambda )
       if( abs( b - params.b(ind)) < tolerance) Unit
@@ -27,8 +26,7 @@ class CoordinateDescent( cost: (Params, Double, Double) => Double,
     }
     def interceptDescend(params: Params): Unit = {
       val b0 = params.b0(0)
-      params.b0(0) = 1 / sum(w:* s) * ((w:* s).t *( ( y - x*params.b)))
-      //params.b0(0) = 1 / sum(w) * ((w).t *( ( y - x*params.b)))
+      params.b0(0) = 1 / sum(w*:* s) * ((w*:* s).t *( ( y - x*params.b)))
       if( abs(b0 - params.b0(0)) < tolerance) Unit
       else interceptDescend(params)
     }
@@ -42,13 +40,9 @@ class CoordinateDescent( cost: (Params, Double, Double) => Double,
       }
 
       if( abs(j - cost(params, lambda, alpha)) < tolerance) {
-        //  println(s"lambda => $lambda\nalpha => $alpha\nk => ${params.scale(0)}")
-        //  println( cost(params, lambda, alpha, params.scale(0)) )
         Unit
       }
       else {
-        // println(s"lambda => $lambda\nalpha => $alpha\nk => ${params.scale(0)}")
-        // println( cost(params, lambda, alpha, params.scale(0)) )
         val r = (y - g(x, params))
         w := weightFunction(r)
         update(params, tolerance)
