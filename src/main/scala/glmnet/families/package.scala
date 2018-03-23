@@ -1,13 +1,11 @@
-package com.github.timsetsfire.en4s
+package com.github.timsetsfire.enets
 
-/**
-  * Created by WhittakerT on 10/26/2017.
-  */
+
 package object families {
 
   import breeze.numerics._
   import breeze.linalg._
-  import com.github.timsetsfire.en4s.utils._
+  import com.github.timsetsfire.enets.utils._
 
   trait Family {
     def ll(b: Params): Double

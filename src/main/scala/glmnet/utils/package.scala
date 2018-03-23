@@ -1,8 +1,6 @@
-package com.github.timsetsfire.en4s
+package com.github.timsetsfire.enets
 
-/**
-  * Created by WhittakerT on 10/25/2017.
-  */
+
 package object utils {
 
   import breeze.linalg.{*, DenseMatrix, DenseVector, diag, pinv}

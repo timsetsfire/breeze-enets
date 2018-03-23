@@ -1,4 +1,4 @@
-# en4s (Elastic Net 4 Scala)
+# ENETS (_E_lastic Nets in _S_cala)
 
 Simple framework for running generalized linear models or robust linear models with elastic net regularization in scala.  Optimization is completed via coordinate descent as laid out in [Regularization Paths for Generalized Linear Models via Coordinate Descent](http://web.stanford.edu/~hastie/Papers/glmnet.pdf)
 
@@ -37,8 +37,8 @@ The robust norms are based on the implementation in statsmodels for Python.
 ~~~
 import breeze.linalg.{DenseVector,DenseMatrix}
 import breeze.stats.distributions.{Gaussian, Poisson,Binomial}
-import com.github.timsetsfire.en4s._
-import com.github.timsetsfire.en4s.robust.norms._
+import com.github.timsetsfire.enets._
+import com.github.timsetsfire.enets.robust.norms._
 val x = DenseMatrix.rand(100,50,Gaussian(0,4))
 val y = DenseVector.rand(100,Gaussian(0,4))
 val g = DenseVector.rand(100,Binomial(1,0.3)).map{_.toDouble}
@@ -59,15 +59,16 @@ If you want to be able to use this in jupyter-scala notebooks, change the scala 
 
 Then from jupyter notebook 
 
-`classpath.addPath("$PATH/en4s/target/scala-2.11/en4s_2.11-1.0.jar")`
+`classpath.addPath("$PATH/enets/target/scala-2.11/enets_2.11-1.0.jar")`
 
 and 
 
 `classpath.add("org.scalanlp" %% "breeze" % "0.13.2",
     "org.scalanlp" %% "breeze-natives" % "0.13.2",
     "org.scalanlp" %% "breeze-viz" % "0.13.2")`
+    
+See the usage notebook in the notebooks folder.
 
-I will add a notebook example asap. 
 
 
 

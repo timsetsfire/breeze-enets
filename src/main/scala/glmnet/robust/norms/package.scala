@@ -1,8 +1,5 @@
-package com.github.timsetsfire.en4s.robust
+package com.github.timsetsfire.enets.robust
 
-/**
-  * Created by WhittakerT on 10/26/2017.
-  */
 package object norms {
 
   import breeze.linalg._

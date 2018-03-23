@@ -1,18 +1,33 @@
-package com.github.timsetsfire.en4s
+package com.github.timsetsfire.enets
 
 import breeze.linalg._
 import breeze.numerics._
 import breeze.stats._
-import com.github.timsetsfire.en4s.utils._
-import com.github.timsetsfire.en4s.robust.norms._
-import com.github.timsetsfire.en4s.robust.scale.Mad._
-import com.github.timsetsfire.en4s.families._
-import com.github.timsetsfire.en4s.optimize.CoordinateDescent
+import com.github.timsetsfire.enets.utils._
+import com.github.timsetsfire.enets.robust.norms._
+import com.github.timsetsfire.enets.robust.scale.Mad._
+import com.github.timsetsfire.enets.families._
+import com.github.timsetsfire.enets.optimize.CoordinateDescent
 import breeze.plot._
 
-/**
-  * Created by WhittakerT on 10/26/2017.
-  */
+
+/** Estimate Robust Linear Model with Elastic Net Regularization 
+  * using methods decribed in Regularization Paths for Generalized 
+  * linear model via Coordinate Descent 
+  * and Elements of Statistical Learning 
+  * @constructor create a RlmNet model 
+  * @param feature DenseMatrix of doubles containing features 
+  * @param target DenseVector of doubles containing the target 
+  * @param rnorm robust norm, default is HuberT()
+  * @param alpha mixing parameter for L1 and L2 Regularization
+  * @param tolerance for coordinate descent 
+  * @param standardizeFeatures boolean value, whether to standardize
+  * the feature matrix to mean 0 and unit variance, default is true 
+  * @param standardizeTarget boolean value, whether to standardize 
+  * the target vector to mean 0 and unit variance, default is false 
+  * @param intercept boolean value, whether or not to include a constant, 
+  * default is true 
+  */ 
 
 class RlmNet (
                features: DenseMatrix[Double],
@@ -23,9 +38,30 @@ class RlmNet (
                tolerance: Double = 1e-3,
                standardizeFeatures: Boolean = true,
                standardizeTarget: Boolean = false,
-               intercept: Boolean = false
+               intercept: Boolean = true
               ) extends ElasticNet(features, target, DenseVector(1d), "gaussian", "identity", rnorm, lambdaSeq, alpha, tolerance, standardizeFeatures, standardizeTarget, intercept)
-
+              
+/** Estimate Generalized Linear Model with Elastic Net Regularization 
+  * using methods decribed in Regularization Paths for Generalized 
+  * linear model via Coordinate Descent 
+  * and Elements of Statistical Learning 
+  * @constructor create a RlmNet model 
+  * @param feature DenseMatrix of doubles containing features 
+  * @param target DenseVector of doubles containing the target
+  * @param offset DenseVector of doubles containing the offset
+  * @param family for the model, values include gaussian, poisson,
+  * negbin, binomial.  Default is Gaussian
+  * @param link for the expected value of the target.  Doesn't really 
+  * need to be included because it is set depending on the family choosen
+  * @param alpha mixing parameter for L1 and L2 Regularization
+  * @param tolerance for coordinate descent 
+  * @param standardizeFeatures boolean value, whether to standardize
+  * the feature matrix to mean 0 and unit variance, default is true 
+  * @param standardizeTarget boolean value, whether to standardize 
+  * the target vector to mean 0 and unit variance, default is false 
+  * @param intercept boolean value, whether or not to include a constant, 
+  * default is true 
+  */ 
 class GlmNet(
                features: DenseMatrix[Double],
                target: DenseVector[Double],
@@ -40,6 +76,8 @@ class GlmNet(
                intercept: Boolean = true 
              ) extends ElasticNet(features, target, offset, family, link, LeastSquares, lambdaSeq, alpha, tolerance, standardizeFeatures, standardizeTarget, intercept)
              
+/** create an ElasticNet instance.  Shouldn't be used directly
+  */ 
 class ElasticNet (
                    val features: DenseMatrix[Double],
                    val target: DenseVector[Double],
@@ -55,20 +93,26 @@ class ElasticNet (
                    val intercept: Boolean = false
                  ) {
 
+  // standardize features
   val (x, xm, xsig) = {
     val z = stdizeMatrix(features)
     if(standardizeFeatures) z else (features.copy, z._2, z._3)
   }
+  // standardize target
   val (y, ym, ysig) = {
     val z = stdizeVector(target)
     if(standardizeTarget) z else (target.copy, z._2, z._3)
   }
+  // nobs and nfeatures
   val (m, n) = (features.rows, features.cols)
 
+  // initialize weight 
   val weight = y - mean(y)
 
+  // apply robust norm
   weight := rnorm.w( weight / mad(weight) )
 
+  // initialize parameters
   val parms = Params( DenseVector.zeros[Double](n), DenseVector(0d), intercept)
   parms.scale(0) = 1e-4
   parms.b0(0) = if(link=="log" & (offset.length == y.length)) {
@@ -83,6 +127,7 @@ class ElasticNet (
 
   val exposure = if(offset.length == 1) DenseVector.ones[Double](y.length) else offset.copy
 
+  // set distribution
   val dist: Family = {
     if (family == "negbin") new NegativeBinomial(x,y,weight,exposure)
     else if(family == "poisson") new Poisson(x,y,weight,exposure)
@@ -90,10 +135,19 @@ class ElasticNet (
     else Gaussian(x,y,weight, exposure)
   }
 
-  //if(family=="negbin") parms.scale(0) = dist.dev(x,y,w)(parms) / (m).toDouble
+  /** weight function that will be passed to coordinate descent 
+    * @param r DenseVector of doubles.  Will typically be the residual
+    */ 
   def weightFunction(r: DenseVector[Double]) = {
     rnorm.w( r / mad(r) )
   }
+  /** regularized cost function.  curried
+    * @param dist family for the cost function - will exposue the deviance for 
+    * the calculation 
+    * @param parms Params of the linear Model
+    * @param lambda regularization term 
+    * @param alpha mixing of the L1 and L2 regularization 
+    */ 
   def costFunc(dist: Family)(parms: Params, lambda: Double, alpha: Double) = {
     //deviance based cost function
     val d = -1d*dist.ll(parms)
@@ -105,13 +159,9 @@ class ElasticNet (
   val b = DenseMatrix.zeros[Double](n, lambdaSeq.length)
   val b0 = DenseVector.zeros[Double](lambdaSeq.length)
 
-  //val nullCost = costFunc(x, y)(parms)
-
   val nz = (0 until n).toArray
-
-  // def c = costFunc(x,y)_
-
-
+  
+  // create the lambda sequence 
   if ( sum(abs(lambdaSeq)) == 0d ) {
     //  val yt = if(family == "negbin") y / ( mean(y) + mean(y) * mean(y) ) else y.copy
     val (xt, xs, xm) = stdizeMatrix(x)
@@ -122,10 +172,12 @@ class ElasticNet (
     lambdaSeq := linspace(log(lambdaMax), log(lambdaMin), 100)
   }
 
+  // initialize vector to store the deviance
   val deviance = DenseVector.zeros[Double](lambdaSeq.length)
 
+  /** fit the elastic net 
+    */ 
   def fit: Unit = {
-    // don't touch fast3 this is it!!!!!
     for(iter <- 0 until lambdaSeq.length) {
       val lambda = 2*exp(lambdaSeq(iter)) - exp(lambdaSeq(iter - 1))
       val z = dist.z(x, y, exposure, parms)
@@ -135,13 +187,10 @@ class ElasticNet (
       parms.nzbv := (- abs( x.t * r )/x.rows.toDouble <:< - lambda * alpha) |:| parms.nzbv
       val nz = parms.nzbv.toArray.zipWithIndex.filter{ _._1 == true}.map{ _._2}
       val cd = new CoordinateDescent(costFunc(dist), x, z, weight, s, weightFunction)
-	  //cd.optimize( alpha, lambdaSeq(iter), parms, tolerance, nz = nz)
       cd.optimize( alpha, lambda, parms, tolerance, nz = nz)
       parms.nzbv := ( parms.b :!= 0d )
       if(family=="negbin") {
-        //val info = nbest.fitAndReturn
         val df = (x.rows - parms.nzbv.activeSize).toDouble
-        //parms.scale(0) = if( abs(info.grad(0)) < 1e-4 & df > 0) info.x(0) else 1e-4
         val deviance = dist.dev(parms)
         parms.scale(0) = if (df > 0) deviance / df else 0.0001
       }
@@ -150,7 +199,8 @@ class ElasticNet (
       deviance(iter) = dist.dev(parms)
     }
   }
-
+  /** plot the coordinate path 
+    */ 
   def plotCoordinatePath = {
     val nonZero = (b(::, -1) :!= 0d).activeKeysIterator.toArray
     val f = Figure()

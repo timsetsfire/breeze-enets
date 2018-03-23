@@ -1,12 +1,10 @@
-package com.github.timsetsfire.en4s.optimize
+package com.github.timsetsfire.enets.optimize
 
 import breeze.linalg._
 import breeze.numerics._
-import com.github.timsetsfire.en4s.utils._
+import com.github.timsetsfire.enets.utils._
 
-/**
-  * Created by WhittakerT on 10/26/2017.
-  */
+
 class CoordinateDescent( cost: (Params, Double, Double) => Double,
                          x: DenseMatrix[Double],
                          y: DenseVector[Double],
