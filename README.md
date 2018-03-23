@@ -1,4 +1,4 @@
-# ENETS (_E_lastic Nets in _S_cala)
+# ENETS (Elastic Nets in Scala)
 
 Simple framework for running generalized linear models or robust linear models with elastic net regularization in scala.  Optimization is completed via coordinate descent as laid out in [Regularization Paths for Generalized Linear Models via Coordinate Descent](http://web.stanford.edu/~hastie/Papers/glmnet.pdf)
 
